@@ -64,6 +64,8 @@ action_init() {
     echo "[!] PD install fail or already installed?"
   fi
 
+  proot-distro login void -- /bin/sh -c 'xbps-install -y -Syu xbps' >/dev/null
+
   proot-distro login void -- /bin/sh -c '
         xbps-install -Syu || { echo "[!] Fail update repo"; exit 1; }
         xbps-install -y shadow sudo bash coreutils util-linux || {
