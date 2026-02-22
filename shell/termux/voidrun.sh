@@ -1,8 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 VOIDRUN_SDCARD_PATH="${VOIDRUN_SDCARD_PATH:-}"
-user_env=$(whoami)
 script_name="voidrun"
+
+if [[ "$(id -u)" == 0 ]]; then
+  echo "[!] Please don't run as root"
+  exit 1
+fi
 
 show_help() {
   cat <<EOF
@@ -11,43 +15,41 @@ Usage: $(basename "$0") <command> [options] [-- <args>]
 Commands:
   init          Install Void Linux (if not installed) and run initial upgrade
   update        Update all packages inside Void
+  install       Install a package
   shell         Open a shell inside the Void environment
   help          Show this help message
 
 Options:
-  --root        Run the following command as root and isolated (only works with custom commands)
+  --root        Run the following command as isolated root (only works with custom commands)
   --exec        Pass arguments after to 'void'
 Any other arguments after '--' will be passed directly to 'void'.
 
-external SDCard:
-export this environment 'VOIDRUN_SDCARD_PATH' to bind external SDCard to the same path
-example 'export VOIDRUN_SDCARD_PATH=/storage/<sdcard id>'
+external sdcard:
+export this environment 'VOIDRUN_SDCARD_PATH' to bind external SDCard to the same path 
+example
+  'export VOIDRUN_SDCARD_PATH=/storage/<sdcard id>'
 EOF
 }
 
 void_execute() {
   local cmd="$1"
-
-  if [[ "$opt_runasroot" == true ]]; then
-    user_env="root"
-  fi
-
   local pd_args=(
     login void
-    --shared-tmp
-    --user "$user_env"
     --env DISPLAY="${DISPLAY}"
     --env XAUTHORITY="${HOME}/.Xauthority"
     --env GALLIUM_DRIVER=virpipe
     --env MESA_GL_VERSION_OVERRIDE=4.0
   )
 
-  if [[ "$opt_runasroot" == true ]]; then
+  if [[ "$opt_run_asroot" == true ]]; then
     pd_args+=(--isolated)
+    pd_args+=(--user "root")
   fi
 
-  if [[ "$opt_runasroot" != true ]]; then
+  if [[ "$opt_run_asroot" != true ]]; then
     pd_args+=(--termux-home)
+    pd_args+=(--user "$(whoami)")
+    pd_args+=(--shared-tmp)
   fi
 
   if [[ -n $VOIDRUN_SDCARD_PATH ]]; then
@@ -58,14 +60,19 @@ void_execute() {
 }
 
 action_init() {
+  local user_env="$(whoami)"
+
+  echo "[!] PD install void"
   if proot-distro install void >/dev/null 2>&1; then
     echo "[!] PD install OK"
   else
     echo "[!] PD install fail or already installed?"
   fi
 
-  proot-distro login void -- /bin/sh -c 'xbps-install -y -Syu xbps' >/dev/null
+  echo "[!] Updating xbps"
+  proot-distro login void -- /bin/sh -c 'xbps-install -u xbps' >/dev/null
 
+  echo "[!] Init voidrun setup"
   proot-distro login void -- /bin/sh -c '
         xbps-install -Syu || { echo "[!] Fail update repo"; exit 1; }
         xbps-install -y shadow sudo bash coreutils util-linux || {
@@ -86,21 +93,35 @@ action_init() {
 }
 
 action_update() {
-  opt_runasroot=true
-  void_execute "xbps-install -Su" &&
-    echo "[!] Update complete" || echo "[!] Update Failed"
+  opt_run_asroot=true
+  if void_execute "xbps-install -Su"; then
+    void_execute "xbps-remove -o"
+    echo "[!] Update complete"
+  else
+    echo "[!] Update Failed"
+  fi
 }
 
 action_install() {
   if [[ $# -eq 0 ]]; then
-    echo "need 1 argument"
+    echo "need 1 argument or more"
     exit 1
   fi
-  opt_runasroot=true
+  opt_run_asroot=true
   void_execute "xbps-install -- $@"
 }
 
-opt_runasroot=false
+action_uninstall() {
+  if [[ $# -eq 0 ]]; then
+    echo "need 1 argument or more"
+    exit 1
+  fi
+  opt_run_asroot=true
+  void_execute "xbps-remove -- $@" &&
+    void_execute "xbps-remove -o"
+}
+
+opt_run_asroot=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -125,8 +146,13 @@ while [[ $# -gt 0 ]]; do
     action_install "$*"
     exit 0
     ;;
+  uninstall)
+    shift
+    action_uninstall "$*"
+    exit 0
+    ;;
   --root)
-    opt_runasroot=true
+    opt_run_asroot=true
     shift
     ;;
   --exec)
