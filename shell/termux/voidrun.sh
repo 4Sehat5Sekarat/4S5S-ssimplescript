@@ -1,7 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 VOIDRUN_SDCARD_PATH="${VOIDRUN_SDCARD_PATH:-}"
-script_name="voidrun"
 
 if [[ "$(id -u)" == 0 ]]; then
   echo "[!] Please don't run as root"

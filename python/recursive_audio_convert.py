@@ -52,7 +52,7 @@ def convert(
     # Execute command
     if dryrun:
         print("[!] Will execute command :")
-        print(command)
+        print(" ".join(command))
         return
     
     subprocess.run(command)
@@ -143,9 +143,9 @@ def user_interact(is_more=False):
     
     if is_more:
         extra_argument["is_simple"] = False
-        ui_extra_codec =    input("Codec              (default AAC) : ").lower()
-        ui_extra_bitrate =  input("Bitrate           (default 330k) : ").lower()
-        ui_extra_metadata = input("Clean metadata       (default n) : ").lower()
+        ui_extra_codec      = input("Codec   [n]        (default AAC) : ").lower()
+        ui_extra_bitrate    = input("Bitrate [n]       (default 330k) : ").lower()
+        ui_extra_metadata   = input("Clean metadata       (default n) : ").lower()
         ui_output_extension = input("Output extension (default codec) : ").lower()
 
         if len(ui_extra_codec) > 1:
@@ -211,6 +211,7 @@ def user_interact(is_more=False):
 def main():
     is_m = input("More advance option? Y/n (default n) : ").lower()
     if is_m in ("y", "yes"):
+        print("More extra option, use 'none' to empty the value which will skip default value this only for [n] labeled")
         is_m = True
     else:
         is_m = False
