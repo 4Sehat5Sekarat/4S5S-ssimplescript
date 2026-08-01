@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-# Place script are saved
 SP_SAVE_TEMP="${SP_SAVE_TEMP:-$HOME/.local/state/scratchpad.sh/}"
-# Max count script are saved
 SP_MAX_TEMP="${SP_MAX_TEMP:-10}"
 EDITOR="${EDITOR:-vi}"
 
@@ -42,22 +40,21 @@ edit_script() {
   fi
 
   $EDITOR "$TEMP_SCRIPT"
+  export TS="$TEMP_SCRIPT"
 }
 
 # Execute script function
 execute() {
-  trap '' INT # Make Ctrl-c are not closing this script
+  trap '' INT
   printf '%s\n' "Execute script, Ctrl-c to kill"
 
-  # I wonder why is this actually works
   (
     trap - INT
     exec bash "$TEMP_SCRIPT"
   )
 
   printf '\n%s\n' "Done.."
-  trap - INT # Make Ctrl-c can close this script
-}
+  trap - INT
 
 # Delete oldest script if more than max
 #TODO: Need some rewrite

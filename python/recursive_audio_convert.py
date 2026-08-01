@@ -111,7 +111,7 @@ def main():
         if user_input in ("", "done"):
             acc = ui_input(prompt="done? > ", is_boolean=True, old_value=False)
             if acc:
-                break  # end loops
+                break
             else:
                 continue
 
